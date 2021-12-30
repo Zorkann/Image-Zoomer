@@ -1,133 +1,49 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./styles.css";
-
-function getZoomBoxSize(zoomBox, image, zoomWindow, zoomedImage) {
-  let widthPercentage = zoomWindow.clientWidth / zoomedImage.clientWidth;
-  let heightPercentage = zoomWindow.clientHeight / zoomedImage.clientHeight;
-  return {
-    width: Math.round(image.clientWidth * widthPercentage) + "px",
-    height: Math.round(image.clientHeight * heightPercentage) + "px"
-  };
-}
-
-function isWithinImage(imageBounds, event) {
-  let { bottom, left, right, top } = imageBounds;
-  let { pageX, pageY } = event;
-
-  return pageX > left && pageX < right && pageY > top && pageY < bottom;
-}
-
-function containNum(num, lowerBound, upperBound) {
-  if (num < lowerBound) {
-    return lowerBound;
-  }
-  if (num > upperBound) {
-    return upperBound;
-  }
-  return num;
-}
-
-function getZoomBoxOffset(mouseX, mouseY, zoomBoxBounds, imageBounds) {
-  let x = mouseX - zoomBoxBounds.width / 2;
-  let y = mouseY - zoomBoxBounds.height / 2;
-
-  x = containNum(x, imageBounds.left, imageBounds.right - zoomBoxBounds.width);
-  y = containNum(y, imageBounds.top, imageBounds.bottom - zoomBoxBounds.height);
-
-  x -= zoomBoxBounds.left;
-  y -= zoomBoxBounds.top;
-
-  return { x: Math.round(x), y: Math.round(y) };
-}
-
-function toDocumentBounds(bounds) {
-  let { scrollX, scrollY } = window;
-  let { bottom, height, left, right, top, width } = bounds;
-
-  return {
-    bottom: bottom + scrollY,
-    height,
-    left: left + scrollX,
-    right: right + scrollX,
-    top: top + scrollY,
-    width
-  };
-}
+import {
+  getZoomBoxSize,
+  isWithinImage,
+  getZoomBoxOffset,
+  toDocumentBounds
+} from "./utils";
 
 const ZoomImage = () => {
+  const [hovered, setHovered] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const zoomBoxRef = useRef<HTMLDivElement>(null);
   const zoomedImageRef = useRef<HTMLImageElement>(null);
   const zoomWindowRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-  const moveScheduledRef = useRef(false);
   const imageBoundsRef = useRef(null);
   const zoomBoxBoundsRef = useRef(null);
 
   useEffect(() => {
-    const { width, height } = getZoomBoxSize(
-      zoomBoxRef.current,
-      imageRef.current,
-      zoomWindowRef.current,
-      zoomedImageRef.current
-    );
-    zoomBoxRef.current.style.width = width;
-    zoomBoxRef.current.style.height = height;
+    if (loaded) {
+      const { width, height } = getZoomBoxSize(
+        imageRef.current,
+        zoomWindowRef.current,
+        zoomedImageRef.current
+      );
 
-    listenForMouseEnter();
+      zoomBoxRef.current.style.width = width;
+      zoomBoxRef.current.style.height = height;
 
-    imageBoundsRef.current = toDocumentBounds(
-      imageRef.current?.getBoundingClientRect()
-    );
-    zoomBoxBoundsRef.current = toDocumentBounds(
-      zoomBoxRef.current?.getBoundingClientRect()
-    );
-  }, []);
-
-  function handleMouseMove(event) {
-    if (moveScheduledRef.current) {
-      return;
+      imageBoundsRef.current = toDocumentBounds(
+        imageRef.current.getBoundingClientRect()
+      );
+      zoomBoxBoundsRef.current = toDocumentBounds(
+        zoomBoxRef.current.getBoundingClientRect()
+      );
     }
-    window.requestAnimationFrame(() => {
-      if (isWithinImage(imageBoundsRef.current, event)) {
-        updateUI(event.pageX, event.pageY);
-      } else {
-        deactivate();
-      }
-      moveScheduledRef.current = false;
-    });
-    moveScheduledRef.current = true;
-  }
+  }, [loaded]);
 
-  function activate() {
-    zoomBoxRef.current.classList.add("active");
-    zoomWindowRef.current.classList.add("active");
-    listenForMouseMove();
-  }
-
-  function deactivate() {
-    zoomBoxRef.current.classList.remove("active");
-    zoomWindowRef.current.classList.remove("active");
-    listenForMouseEnter();
-  }
-
-  function listenForMouseEnter() {
-    document.body.removeEventListener("mousemove", handleMouseMove);
-    imageRef.current.addEventListener("mouseenter", activate);
-    zoomBoxRef.current.addEventListener("mouseenter", activate);
-  }
-
-  function listenForMouseMove() {
-    imageRef.current.removeEventListener("mouseenter", activate);
-    zoomBoxRef.current.removeEventListener("mouseenter", activate);
-    document.body.addEventListener("mousemove", handleMouseMove);
-  }
-
-  function moveZoomedImage(xPercent, yPercent) {
+  function moveZoomedImage(xBoxOffset, yBoxOffset) {
+    const xPercent = xBoxOffset / imageBoundsRef.current.width;
+    const yPercent = yBoxOffset / imageBoundsRef.current.height;
     let xOffset =
       Math.round(zoomedImageRef.current.clientWidth * xPercent) * -1;
     let yOffset =
       Math.round(zoomedImageRef.current.clientHeight * yPercent) * -1;
-
     zoomedImageRef.current.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
   }
 
@@ -138,12 +54,20 @@ const ZoomImage = () => {
       zoomBoxBoundsRef.current,
       imageBoundsRef.current
     );
+
     zoomBoxRef.current.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
-    moveZoomedImage(
-      xOffset / imageBoundsRef.current.width,
-      yOffset / imageBoundsRef.current.height
-    );
+    moveZoomedImage(xOffset, yOffset);
   }
+
+  function handleMouseMove(event) {
+    window.requestAnimationFrame(() => {
+      if (isWithinImage(imageBoundsRef.current, event)) {
+        updateUI(event.pageX, event.pageY);
+      }
+    });
+  }
+
+  const isActive = hovered ? "active" : "";
 
   return (
     <div className="image-zoomer-demo">
@@ -152,10 +76,20 @@ const ZoomImage = () => {
           src="https://s3-us-west-1.amazonaws.com/willhastings.me/images/posts/building-vanilla-js-image-zoomer/original.jpg"
           alt="Spiral Galaxy"
           ref={imageRef}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          onMouseMove={handleMouseMove}
+          onLoad={() => setLoaded(true)}
         />
-        <div className="zoom-box" ref={zoomBoxRef} />
+        <div
+          className={"zoom-box " + isActive}
+          ref={zoomBoxRef}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          onMouseMove={handleMouseMove}
+        />
       </div>
-      <div className="zoom-window" ref={zoomWindowRef}>
+      <div className={"zoom-window " + isActive} ref={zoomWindowRef}>
         <img
           src="https://s3-us-west-1.amazonaws.com/willhastings.me/images/posts/building-vanilla-js-image-zoomer/original.jpg"
           alt="Spiral Galaxy"
