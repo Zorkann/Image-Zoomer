@@ -3,7 +3,8 @@
 }
 
 .zoom-container {
-  flex: 1;
+  width: 200px;
+  height: 200px;
   padding-right: 25px;
   position: relative;
 }
@@ -13,10 +14,9 @@
 }
 
 .zoom-box {
-  backface-visibility: hidden;
   border: 2px lightblue solid;
   left: 0;
-  opacity: 0;
+  opacity: 1;
   position: absolute;
   top: 0;
 }
@@ -27,16 +27,15 @@
 
 .zoom-window {
   border: 1px #31708f solid;
-  flex: 2;
-  padding-bottom: calc(66.66% - 25px);
+  width: 400px;
+  height: 400px;
   overflow: hidden;
   position: relative;
 }
 
 .zoom-window > img {
-  backface-visibility: hidden;
   position: absolute;
-  opacity: 0;
+  opacity: 1;
 }
 
 .zoom-window.active img {

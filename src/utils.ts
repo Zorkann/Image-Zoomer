@@ -7,12 +7,6 @@ function getZoomBoxSize(image, zoomWindow, zoomedImage) {
   };
 }
 
-function isWithinImage(imageBounds, event) {
-  let { bottom, left, right, top } = imageBounds;
-  let { pageX, pageY } = event;
-  return pageX > left && pageX < right && pageY > top && pageY < bottom;
-}
-
 function containNum(num, lowerBound, upperBound) {
   if (num < lowerBound) {
     return lowerBound;
@@ -50,4 +44,4 @@ function toDocumentBounds(bounds) {
   };
 }
 
-export { getZoomBoxSize, isWithinImage, getZoomBoxOffset, toDocumentBounds };
+export { getZoomBoxSize, getZoomBoxOffset, toDocumentBounds };

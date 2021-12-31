@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./styles.css";
-import {
-  getZoomBoxSize,
-  isWithinImage,
-  getZoomBoxOffset,
-  toDocumentBounds
-} from "./utils";
+import { getZoomBoxSize, getZoomBoxOffset, toDocumentBounds } from "./utils";
 
 const ZoomImage = () => {
   const [hovered, setHovered] = useState(false);
@@ -18,7 +13,8 @@ const ZoomImage = () => {
   const zoomBoxBoundsRef = useRef(null);
 
   useEffect(() => {
-    if (loaded) {
+    if (!loaded) return;
+    (function setZoomBoxSize() {
       const { width, height } = getZoomBoxSize(
         imageRef.current,
         zoomWindowRef.current,
@@ -27,14 +23,17 @@ const ZoomImage = () => {
 
       zoomBoxRef.current.style.width = width;
       zoomBoxRef.current.style.height = height;
+    })();
+  }, [loaded]);
 
-      imageBoundsRef.current = toDocumentBounds(
-        imageRef.current.getBoundingClientRect()
-      );
-      zoomBoxBoundsRef.current = toDocumentBounds(
-        zoomBoxRef.current.getBoundingClientRect()
-      );
-    }
+  useEffect(() => {
+    if (!loaded) return;
+    imageBoundsRef.current = toDocumentBounds(
+      imageRef.current.getBoundingClientRect()
+    );
+    zoomBoxBoundsRef.current = toDocumentBounds(
+      zoomBoxRef.current.getBoundingClientRect()
+    );
   }, [loaded]);
 
   function moveZoomedImage(xBoxOffset, yBoxOffset) {
@@ -61,9 +60,7 @@ const ZoomImage = () => {
 
   function handleMouseMove(event) {
     window.requestAnimationFrame(() => {
-      if (isWithinImage(imageBoundsRef.current, event)) {
-        updateUI(event.pageX, event.pageY);
-      }
+      updateUI(event.pageX, event.pageY);
     });
   }
 
